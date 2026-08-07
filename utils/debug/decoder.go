@@ -3,7 +3,7 @@ package debug
 import (
 	"runtime/debug"
 
-	"github.com/netsampler/goflow2/v2/utils"
+	"github.com/RedgeGuardian/goflow2/v2/utils"
 )
 
 // PanicDecoderWrapper wraps a decoder to recover panics as errors.

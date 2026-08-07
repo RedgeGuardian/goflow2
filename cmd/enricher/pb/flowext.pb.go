@@ -704,7 +704,7 @@ const file_cmd_enricher_pb_flowext_proto_rawDesc = "" +
 	"NETFLOW_V5\x10\x02\x12\x0e\n" +
 	"\n" +
 	"NETFLOW_V9\x10\x03\x12\t\n" +
-	"\x05IPFIX\x10\x04B6Z4github.com/netsampler/goflow2/cmd/enricher/pb;flowpbb\x06proto3"
+	"\x05IPFIX\x10\x04B<Z:github.com/RedgeGuardian/goflow2/v2/cmd/enricher/pb;flowpbb\x06proto3"
 
 var (
 	file_cmd_enricher_pb_flowext_proto_rawDescOnce sync.Once

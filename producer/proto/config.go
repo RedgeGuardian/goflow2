@@ -1,7 +1,7 @@
 package protoproducer
 
 import (
-	"github.com/netsampler/goflow2/v2/decoders/netflow"
+	"github.com/RedgeGuardian/goflow2/v2/decoders/netflow"
 )
 
 // EndianType identifies endianness for mapped fields.

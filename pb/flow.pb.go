@@ -706,7 +706,7 @@ const file_pb_flow_proto_rawDesc = "" +
 	"\n" +
 	"\x06Teredo\x10\r\x12\n" +
 	"\n" +
-	"\x06Custom\x10cB)Z'github.com/netsampler/goflow2/pb;flowpbb\x06proto3"
+	"\x06Custom\x10cB/Z-github.com/RedgeGuardian/goflow2/v2/pb;flowpbb\x06proto3"
 
 var (
 	file_pb_flow_proto_rawDescOnce sync.Once

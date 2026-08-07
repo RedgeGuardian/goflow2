@@ -44,7 +44,7 @@ services:
       args:
         VERSION: compose
         LDFLAGS: -X main.version=compose
-    image: netsampler/goflow2
+    image: redgeguardian/goflow2
     depends_on:
       - kafka
     ports:

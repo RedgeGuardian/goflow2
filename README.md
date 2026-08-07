@@ -1,7 +1,7 @@
 # GoFlow2
 
-[![Build Status](https://github.com/netsampler/goflow2/workflows/Build/badge.svg)](https://github.com/netsampler/goflow2/actions?query=workflow%3ABuild)
-[![Go Reference](https://pkg.go.dev/badge/github.com/netsampler/goflow2.svg)](https://pkg.go.dev/github.com/netsampler/goflow2)
+[![Build Status](https://github.com/RedgeGuardian/goflow2/workflows/Build/badge.svg)](https://github.com/RedgeGuardian/goflow2/actions?query=workflow%3ABuild)
+[![Go Reference](https://pkg.go.dev/badge/github.com/RedgeGuardian/goflow2/v2.svg)](https://pkg.go.dev/github.com/RedgeGuardian/goflow2/v2)
 
 This application is a NetFlow/IPFIX/sFlow collector in Go.
 
@@ -169,7 +169,7 @@ More information about workers and resource usage is available on the [Performan
 
 You can also run directly with a container:
 ```
-$ sudo docker run -p 6343:6343/udp -p 2055:2055/udp -ti netsampler/goflow2:latest
+$ sudo docker run -p 6343:6343/udp -p 2055:2055/udp -ti redgeguardian/goflow2:latest
 ```
 
 ### Mapping extra fields
