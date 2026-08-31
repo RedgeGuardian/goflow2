@@ -57,6 +57,8 @@ type UDPReceiver struct {
 	workers int
 	sockets int
 
+	receiveBuffer int
+
 	cb ReceiverCallback
 }
 
@@ -66,6 +68,15 @@ type UDPReceiverConfig struct {
 	Sockets   int
 	Blocking  bool
 	QueueSize int
+
+	// ReceiveBuffer is the socket receive buffer size in bytes (SO_RCVBUF). It is
+	// supported on Linux only: elsewhere any positive value makes Start fail rather
+	// than apply accounting nobody verified. 0 keeps the kernel default on every
+	// platform, and a negative value is always rejected.
+	// On Linux the kernel doubles the requested value for bookkeeping and silently
+	// clamps it to net.core.rmem_max without reporting an error, so a request above
+	// that limit takes effect only partially.
+	ReceiveBuffer int
 
 	ReceiverCallback ReceiverCallback
 }
@@ -94,6 +105,7 @@ func NewUDPReceiver(cfg *UDPReceiverConfig) (*UDPReceiver, error) {
 		r.workers = cfg.Workers
 		dispatchSize = cfg.QueueSize
 		r.blocking = cfg.Blocking
+		r.receiveBuffer = cfg.ReceiveBuffer
 		r.cb = cfg.ReceiverCallback
 	}
 
@@ -144,6 +156,23 @@ func (r *UDPReceiver) receive(addr string, port int, started chan bool) error {
 	if err != nil {
 		return err
 	}
+	// Everything that can fail the socket setup has to run before close(started):
+	// receivers() only propagates an error out of Start when started is still open.
+	udpconn, ok := pconn.(*net.UDPConn)
+	if !ok {
+		if closeErr := pconn.Close(); closeErr != nil {
+			r.logError(closeErr)
+		}
+		return fmt.Errorf("not a udp connection")
+	}
+
+	if err := setReceiveBuffer(udpconn, r.receiveBuffer); err != nil {
+		if closeErr := udpconn.Close(); closeErr != nil {
+			r.logError(closeErr)
+		}
+		return err
+	}
+
 	close(started) // indicates receiver is setup
 
 	q := make(chan bool)
@@ -164,11 +193,6 @@ func (r *UDPReceiver) receive(addr string, port int, started chan bool) error {
 		}
 	}()
 	defer close(q)
-
-	udpconn, ok := pconn.(*net.UDPConn)
-	if !ok {
-		return fmt.Errorf("not a udp connection")
-	}
 
 	return r.receiveRoutine(udpconn)
 }
