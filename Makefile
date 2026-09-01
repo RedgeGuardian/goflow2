@@ -6,10 +6,7 @@ GOARCH        ?= $(shell go env GOARCH)
 BUILDINFOSDET ?= 
 
 NAME          := goflow2
-DOCKER_IMAGE  ?= redgeguardian/$(NAME)
 VERSION       ?= $(shell git describe --abbrev --long HEAD)
-ABBREV        ?= $(shell git rev-parse --short HEAD)
-COMMIT        ?= $(shell git rev-parse HEAD)
 TAG           ?= $(shell git describe --tags --abbrev=0 HEAD)
 VERSION_PKG   ?= $(shell echo $(VERSION) | sed 's/^v//g')
 LICENSE       := BSD-3-Clause
@@ -19,13 +16,6 @@ DATE          :=  $(shell date +%FT%T%z)
 BUILDINFOS    ?=  ($(DATE)$(BUILDINFOSDET))
 LDFLAGS       ?= '-X main.version=$(VERSION) -X main.buildinfos=$(BUILDINFOS)'
 MAINTAINER    := lspgn@users.noreply.github.com
-DOCKER_BIN    ?= docker
-DOCKER_CMD    ?= buildx build
-DOCKER_SUFFIX ?= 
-DOCKER_IMAGE_PREFIXES ?= $(DOCKER_IMAGE)
-DOCKER_TAGS ?= $(foreach image,$(DOCKER_IMAGE_PREFIXES),$(image):$(ABBREV)$(DOCKER_SUFFIX))
-DOCKER_TAG_ARGS := $(foreach tag,$(DOCKER_TAGS),-t $(tag))
-DOCKER_MANIFEST_TAG ?= $(ABBREV)
 
 OUTPUT := $(DIST_DIR)goflow2-$(VERSION_PKG)-$(GOOS)-$(GOARCH)$(EXTENSION)
 
@@ -88,36 +78,6 @@ build: prepare
 .PHONY: print-output
 print-output:
 	@echo $(OUTPUT)
-
-.PHONY: docker
-# Build docker image for the current version.
-docker:
-	$(DOCKER_BIN) $(DOCKER_CMD) \
-        --build-arg LDFLAGS=$(LDFLAGS) \
-        --build-arg CREATED="$(DATE)" \
-        --build-arg MAINTAINER="$(MAINTAINER)" \
-        --build-arg URL="$(URL)" \
-        --build-arg NAME="$(NAME)" \
-        --build-arg DESCRIPTION="$(DESCRIPTION)" \
-        --build-arg LICENSE="$(LICENSE)" \
-        --build-arg VERSION="$(VERSION)" \
-        --build-arg REV="$(COMMIT)" \
-        $(DOCKER_TAG_ARGS) .
-
-.PHONY: push-docker
-# Push docker image tagged with the current abbrev.
-push-docker:
-	@for tag in $(DOCKER_TAGS); do \
-		$(DOCKER_BIN) push $$tag; \
-	done
-
-.PHONY: docker-manifest
-# Create and push multi-arch manifest for abbrev and latest tags.
-docker-manifest:
-	$(DOCKER_BIN) buildx imagetools create \
-	    -t $(DOCKER_IMAGE):$(DOCKER_MANIFEST_TAG) \
-	    $(DOCKER_IMAGE):$(ABBREV)-amd64 \
-	    $(DOCKER_IMAGE):$(ABBREV)-arm64
 
 .PHONY: package-deb
 package-deb: build

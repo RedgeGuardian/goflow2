@@ -8,11 +8,6 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  # Reuse consistent image names across packaging and manifests.
-  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/goflow2
-  DOCKERHUB_IMAGE: docker.io/${{ github.repository_owner }}/goflow2
-
 jobs:
   test:
     name: Test
@@ -117,61 +112,8 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
         GOARM: ${{ matrix.goarm }}
         EXTENSION: ${{ matrix.extension }}
-      run: |
-        make build
-        echo "BINARY_PATH=$(make print-output)" >> "$GITHUB_ENV"
+      run: make build
 
-    - name: Set docker packaging vars
-      if: matrix.package
-      shell: bash
-      # Package Docker images only for supported linux arch targets.
-      run: |
-        if [[ "${{ matrix.goarch }}" == "amd64" ]]; then
-          echo "DOCKER_PLATFORM=linux/amd64" >> "$GITHUB_ENV"
-          echo "DOCKER_PACKAGE=true" >> "$GITHUB_ENV"
-        elif [[ "${{ matrix.goarch }}" == "arm64" ]]; then
-          echo "DOCKER_PLATFORM=linux/arm64/v8" >> "$GITHUB_ENV"
-          echo "DOCKER_PACKAGE=true" >> "$GITHUB_ENV"
-        else
-          echo "Unsupported GOARCH for docker packaging: ${{ matrix.goarch }}" >&2
-          echo "DOCKER_PACKAGE=false" >> "$GITHUB_ENV"
-          exit 0
-        fi
-        echo "PREBUILT_BINARY=${BINARY_PATH}" >> "$GITHUB_ENV"
-
-    - name: Set up QEMU
-      if: matrix.package && env.DOCKER_PACKAGE == 'true'
-      uses: docker/setup-qemu-action@v3
-
-    - name: Set up Docker Buildx
-      if: matrix.package && env.DOCKER_PACKAGE == 'true'
-      uses: docker/setup-buildx-action@v3
-
-    - name: Login to DockerHub
-      if: matrix.package && env.DOCKER_PACKAGE == 'true' && github.event_name != 'pull_request'
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Log in to GHCR
-      if: matrix.package && env.DOCKER_PACKAGE == 'true' && github.event_name != 'pull_request'
-      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
-
-    - name: Docker package
-      if: matrix.package && env.DOCKER_PACKAGE == 'true'
-      # PRs load the image locally; main pushes to registries.
-      run: |
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          DOCKER_PUSH_FLAG="--load"
-        else
-          DOCKER_PUSH_FLAG="--push"
-        fi
-        DOCKER_SUFFIX=-${{ matrix.goarch }} \
-        DOCKER_IMAGE_PREFIXES="${{ env.DOCKERHUB_IMAGE }} ${{ env.GHCR_IMAGE }}" \
-        DOCKER_CMD="buildx build $DOCKER_PUSH_FLAG --platform $DOCKER_PLATFORM --build-arg BIN_SOURCE=prebuilt --build-arg PREBUILT_BINARY=$PREBUILT_BINARY" \
-        make docker
-          
     - name: Cache user gems
       if: matrix.package
       uses: actions/cache@v4
@@ -220,55 +162,6 @@ jobs:
         name: dist-${{ matrix.goos }}-${{ matrix.goarch }}
         path: dist/*
         retention-days: 14
-
-  manifest:
-    name: Docker Manifests
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name != 'pull_request'
-    steps:
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Log in to GHCR
-      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
-
-    - name: Set VERSION for tag builds
-      if: startsWith(github.ref, 'refs/tags/')
-      run: echo "VERSION=$(git describe --tags --abbrev=0 HEAD)" >> "$GITHUB_ENV"
-
-    - name: Publish manifests (branch)
-      if: "!startsWith(github.ref, 'refs/tags/')"
-      shell: bash
-      # Publish branch-specific and latest tags to both registries.
-      run: |
-        images=("${{ env.DOCKERHUB_IMAGE }}" "${{ env.GHCR_IMAGE }}")
-        for image in "${images[@]}"; do
-          DOCKER_IMAGE="$image" make docker-manifest
-          DOCKER_IMAGE="$image" DOCKER_MANIFEST_TAG=latest make docker-manifest
-        done
-
-    - name: Publish manifests (tag)
-      if: startsWith(github.ref, 'refs/tags/')
-      shell: bash
-      # Tag releases get a versioned manifest plus latest.
-      run: |
-        images=("${{ env.DOCKERHUB_IMAGE }}" "${{ env.GHCR_IMAGE }}")
-        for image in "${images[@]}"; do
-          DOCKER_IMAGE="$image" DOCKER_MANIFEST_TAG="${VERSION}" make docker-manifest
-          DOCKER_IMAGE="$image" DOCKER_MANIFEST_TAG=latest make docker-manifest
-        done
 
   release:
     name: Release
