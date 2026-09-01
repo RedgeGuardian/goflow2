@@ -60,32 +60,13 @@ jobs:
       continue-on-error: true
       run: make staticcheck
 
-  matrix:
-    name: Select Matrix
-    runs-on: ubuntu-latest
-    outputs:
-      include: ${{ steps.set-matrix.outputs.include }}
-    steps:
-    - name: Set matrix for event
-      id: set-matrix
-      shell: bash
-      run: |
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          echo 'include=[{"goos":"linux","goarch":"amd64"}]' >> "$GITHUB_OUTPUT"
-        else
-          echo 'include=[{"goos":"linux","goarch":"amd64"},{"goos":"linux","goarch":"arm64"},{"goos":"linux","goarch":"arm","goarm":"7"},{"goos":"darwin","goarch":"amd64"},{"goos":"darwin","goarch":"arm64"},{"goos":"windows","goarch":"amd64","extension":".exe"},{"goos":"windows","goarch":"arm64","extension":".exe"}]' >> "$GITHUB_OUTPUT"
-        fi
-
   build:
-    name: Build (${{ matrix.goos }}-${{ matrix.goarch }})
-    needs:
-    - test
-    - matrix
+    name: Build (linux-amd64)
+    needs: test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.matrix.outputs.include) }}
+    env:
+      GOOS: linux
+      GOARCH: amd64
     steps:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v4
@@ -107,17 +88,12 @@ jobs:
       run: echo "VERSION=$(git describe --tags --abbrev=0 HEAD)" >> "$GITHUB_ENV"
 
     - name: Build
-      env:
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
-        GOARM: ${{ matrix.goarm }}
-        EXTENSION: ${{ matrix.extension }}
       run: make build
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dist-${{ matrix.goos }}-${{ matrix.goarch }}
+        name: dist-linux-amd64
         path: dist/*
         retention-days: 14
 
