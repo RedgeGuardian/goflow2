@@ -5,25 +5,13 @@ GOOS          ?= linux
 GOARCH        ?= $(shell go env GOARCH)
 BUILDINFOSDET ?= 
 
-NAME          := goflow2
 VERSION       ?= $(shell git describe --abbrev --long HEAD)
-TAG           ?= $(shell git describe --tags --abbrev=0 HEAD)
 VERSION_PKG   ?= $(shell echo $(VERSION) | sed 's/^v//g')
-LICENSE       := BSD-3-Clause
-URL           := https://github.com/RedgeGuardian/goflow2
-DESCRIPTION   := GoFlow2: Open-Source and Scalable Network Sample Collector
 DATE          :=  $(shell date +%FT%T%z)
 BUILDINFOS    ?=  ($(DATE)$(BUILDINFOSDET))
 LDFLAGS       ?= '-X main.version=$(VERSION) -X main.buildinfos=$(BUILDINFOS)'
-MAINTAINER    := lspgn@users.noreply.github.com
 
 OUTPUT := $(DIST_DIR)goflow2-$(VERSION_PKG)-$(GOOS)-$(GOARCH)$(EXTENSION)
-
-# fpm expects x86_64 for amd64, but use GOARCH otherwise.
-FPM_ARCH ?= $(GOARCH)
-ifeq ($(GOARCH),amd64)
-FPM_ARCH = x86_64
-endif
 
 .PHONY: proto
 # Generate Go protobuf bindings.
@@ -78,30 +66,3 @@ build: prepare
 .PHONY: print-output
 print-output:
 	@echo $(OUTPUT)
-
-.PHONY: package-deb
-package-deb: build
-	$(call run_fpm,deb)
-
-.PHONY: package-rpm
-package-rpm: build
-	$(call run_fpm,rpm)
-
-.PHONY: package
-package: package-deb package-rpm
-
-FPM_COMMON_FLAGS := -s dir -n $(NAME) -v $(VERSION_PKG) \
-	--maintainer "$(MAINTAINER)" \
-	--description "$(DESCRIPTION)" \
-	--url "$(URL)" \
-	--architecture $(FPM_ARCH) \
-	--license "$(LICENSE)" \
-	--package $(DIST_DIR)
-FPM_INPUTS := \
-	$(OUTPUT)=/usr/bin/goflow2 \
-	package/goflow2.service=/lib/systemd/system/goflow2.service \
-	package/goflow2.env=/etc/default/goflow2
-
-define run_fpm
-	fpm -t $(1) $(FPM_COMMON_FLAGS) $(FPM_INPUTS)
-endef

@@ -71,9 +71,9 @@ jobs:
       shell: bash
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          echo 'include=[{"goos":"linux","goarch":"amd64","package":true}]' >> "$GITHUB_OUTPUT"
+          echo 'include=[{"goos":"linux","goarch":"amd64"}]' >> "$GITHUB_OUTPUT"
         else
-          echo 'include=[{"goos":"linux","goarch":"amd64","package":true},{"goos":"linux","goarch":"arm64","package":true},{"goos":"linux","goarch":"arm","goarm":"7","package":true},{"goos":"darwin","goarch":"amd64","package":false},{"goos":"darwin","goarch":"arm64","package":false},{"goos":"windows","goarch":"amd64","extension":".exe","package":false},{"goos":"windows","goarch":"arm64","extension":".exe","package":false}]' >> "$GITHUB_OUTPUT"
+          echo 'include=[{"goos":"linux","goarch":"amd64"},{"goos":"linux","goarch":"arm64"},{"goos":"linux","goarch":"arm","goarm":"7"},{"goos":"darwin","goarch":"amd64"},{"goos":"darwin","goarch":"arm64"},{"goos":"windows","goarch":"amd64","extension":".exe"},{"goos":"windows","goarch":"arm64","extension":".exe"}]' >> "$GITHUB_OUTPUT"
         fi
 
   build:
@@ -113,48 +113,6 @@ jobs:
         GOARM: ${{ matrix.goarm }}
         EXTENSION: ${{ matrix.extension }}
       run: make build
-
-    - name: Cache user gems
-      if: matrix.package
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gem
-          ~/.local/share/gem
-        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-gems-
-
-    - name: Cache apt lists and archives
-      if: matrix.package
-      id: cache-apt
-      uses: actions/cache@v4
-      with:
-        path: |
-          /var/cache/apt/archives
-          /var/lib/apt/lists
-        key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/main.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-apt-
-
-    - name: Install fpm
-      if: matrix.package
-      # fpm builds both rpm and deb artifacts from the Go binaries.
-      run: |
-        if [[ "${{ steps.cache-apt.outputs.cache-hit }}" != "true" ]]; then
-          sudo apt-get update
-        fi
-        sudo apt-get install -y rpm ruby ruby-dev
-        gem install --user-install fpm
-        echo "$(ruby -e 'print Gem.user_dir')/bin" >> "$GITHUB_PATH"
-        
-    - name: Package
-      if: matrix.package
-      env:
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
-        GOARM: ${{ matrix.goarm }}
-      run: make package-deb package-rpm
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
