@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       # Full history ensures tag-aware versioning for release builds.
       with:
         fetch-depth: 0
 
     - name: Set up Go 1.x
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v7
       with:
         go-version: ^1.24
         cache: true
@@ -69,13 +69,13 @@ jobs:
       GOARCH: amd64
     steps:
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       # Fetch tags so release builds can resolve VERSION.
       with:
         fetch-depth: 0
 
     - name: Set up Go 1.x
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v7
       with:
         go-version: ^1.24
         cache: true
@@ -91,7 +91,7 @@ jobs:
       run: make build
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: dist-linux-amd64
         path: dist/*
@@ -106,7 +106,7 @@ jobs:
       contents: write
     steps:
     - name: Download Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         path: dist
         pattern: dist-*
@@ -114,7 +114,7 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -130,7 +130,7 @@ jobs:
           core.setOutput('upload_url', data.upload_url);
 
     - name: Upload Release Asset
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
