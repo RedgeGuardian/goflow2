@@ -165,13 +165,6 @@ $ ./goflow2 -listen 'sflow://:6343?count=4,netflow://:2055'
 
 More information about workers and resource usage is available on the [Performance page](/docs/performance.md).
 
-### Docker
-
-You can also run directly with a container:
-```
-$ sudo docker run -p 6343:6343/udp -p 2055:2055/udp -ti redgeguardian/goflow2:latest
-```
-
 ### Mapping extra fields
 
 In the case of exotic template fields or extra payload not supported by GoFlow2
@@ -226,11 +219,6 @@ Direct storage can be done with data-warehouses like Clickhouse.
 
 Each protobuf message is prefixed by its varint length.
 
-This repository contains [examples of pipelines](./compose) with docker-compose.
-The available pipelines are:
-* [Kafka+Clickhouse+Grafana](./compose/kcg)
-* [Logstash+Elastic+Kibana](./compose/elk)
-
 ## Security notes and assumptions
 
 By default, the buffer for UDP is 9000 bytes.
@@ -244,7 +232,7 @@ Are you using GoFlow2 in production at scale? Add yourself here!
 ### Contributions
 
 This project welcomes pull-requests, whether it's documentation,
-instrumentation (e.g: docker-compose, metrics), internals (protocol libraries),
+instrumentation (e.g: metrics), internals (protocol libraries),
 integration (new CLI feature) or else!
 Just make sure to check for the use-cases via an issue.
 
