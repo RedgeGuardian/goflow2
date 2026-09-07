@@ -148,7 +148,13 @@ func (r *UDPReceiver) receive(addr string, port int, started chan bool) error {
 
 	q := make(chan bool)
 	// function to quit
+	// Tracked by r.wg: it reads r.q, which Stop reassigns through init once Wait
+	// returns. Untracked, it can still be entering the select at that point and
+	// race the write. Waiting for it cannot deadlock: Stop closes r.q before it
+	// waits, and close(q) below covers every path where receive returns first.
+	r.wg.Add(1)
 	go func() {
+		defer r.wg.Done()
 		select {
 		case <-q: // if routine has exited before
 		case <-r.q: // upon general close
