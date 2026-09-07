@@ -103,3 +103,51 @@ func TestUDPReceiverRestart(t *testing.T) {
 		require.NoError(t, r.Stop())
 	}
 }
+
+func TestUDPReceiverReceiveBuffer(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *UDPReceiverConfig
+		want int
+	}{
+		{name: "nil config", cfg: nil, want: 0},
+		{name: "unset", cfg: &UDPReceiverConfig{}, want: 0},
+		{name: "explicit zero keeps kernel default", cfg: &UDPReceiverConfig{ReceiveBuffer: 0}, want: 0},
+		{name: "set", cfg: &UDPReceiverConfig{ReceiveBuffer: 1 << 18}, want: 1 << 18},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := NewUDPReceiver(tt.cfg)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, r.receiveBuffer)
+		})
+	}
+}
+
+// TestSetReceiveBufferContract covers the part of setReceiveBuffer that holds on every
+// platform, so the validation stays guarded where the Linux-only read-back test does
+// not build.
+func TestSetReceiveBufferContract(t *testing.T) {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, conn.Close())
+	}()
+
+	require.Error(t, setReceiveBuffer(conn, -1))
+	require.NoError(t, setReceiveBuffer(conn, 0))
+}
+
+// TestUDPReceiverStartRejectsBadReceiveBuffer guards the wiring, not the validation:
+// receive() applies the buffer before close(started) precisely so a failure aborts
+// Start instead of being logged and ignored. Downgrading that to a logError call
+// leaves every other test in this package passing.
+func TestUDPReceiverStartRejectsBadReceiveBuffer(t *testing.T) {
+	port, err := getFreeUDPPort()
+	require.NoError(t, err)
+
+	r, err := NewUDPReceiver(&UDPReceiverConfig{ReceiveBuffer: -1, QueueSize: 1000})
+	require.NoError(t, err)
+
+	require.Error(t, r.Start("::1", port, nil))
+}

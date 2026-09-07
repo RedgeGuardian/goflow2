@@ -27,7 +27,13 @@ GoFlow2 will work better in an environment with guaranteed resources.
 ## Life of a packet
 
 When a packet is received by the collectors' machine, the kernel will send the packet towards a socket.
-The socket is buffered. On Linux, the buffersize is a global configuration setting: `rmem_max`.
+The socket is buffered. On Linux, `UDPReceiverConfig.ReceiveBuffer` sets that buffer per socket
+(`SO_RCVBUF`); leaving it at 0 keeps the kernel default. The setting is Linux-only — on other platforms
+any positive value makes `Start` fail rather than apply accounting that is neither specified nor tested
+here. The kernel silently clamps the request to the global
+`net.core.rmem_max` and reports no error, so that sysctl has to be raised first for a larger value to
+take effect. The kernel also doubles the accepted value for its own bookkeeping, which is the figure
+`/proc` reports back.
 
 If the buffer is full, new packets will be discarded and increasing the count of
 UDP errors.
