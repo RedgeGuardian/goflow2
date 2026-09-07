@@ -1,6 +1,6 @@
 # GoFlow2
 
-[![Build Status](https://github.com/RedgeGuardian/goflow2/workflows/Build/badge.svg)](https://github.com/RedgeGuardian/goflow2/actions?query=workflow%3ABuild)
+[![Build Status](https://github.com/RedgeGuardian/goflow2/workflows/Main/badge.svg)](https://github.com/RedgeGuardian/goflow2/actions?query=workflow%3AMain)
 [![Go Reference](https://pkg.go.dev/badge/github.com/RedgeGuardian/goflow2/v2.svg)](https://pkg.go.dev/github.com/RedgeGuardian/goflow2/v2)
 
 This application is a NetFlow/IPFIX/sFlow collector in Go.
