@@ -72,3 +72,34 @@ func getFreeUDPPort() (int, error) {
 	}
 	return port, nil
 }
+
+// TestUDPReceiverRestart cycles Start/Stop on one receiver. That is the sequence which
+// exposed a race between init reassigning r.q and the per-socket closer goroutine
+// reading it: Stop's wg.Wait returned while that goroutine was still entering its
+// select. Only meaningful under -race.
+func TestUDPReceiverRestart(t *testing.T) {
+	const addr = "::1"
+
+	port, err := getFreeUDPPort()
+	require.NoError(t, err)
+
+	r, err := NewUDPReceiver(&UDPReceiverConfig{Sockets: 2, Workers: 2, QueueSize: 100})
+	require.NoError(t, err)
+
+	for range 25 {
+		require.NoError(t, r.Start(addr, port, nil))
+
+		// The datagram is what makes this test detect anything: it puts
+		// receiveRoutine through a real read and dispatch, which holds the closer
+		// goroutine back far enough that it is still entering its select when Stop
+		// returns from wg.Wait. Cycling Start/Stop without traffic lets the closer
+		// finish first every time, and the window never opens.
+		conn, err := net.Dial("udp", net.JoinHostPort(addr, strconv.Itoa(port)))
+		require.NoError(t, err)
+		_, err = conn.Write([]byte("restart"))
+		require.NoError(t, err)
+		require.NoError(t, conn.Close())
+
+		require.NoError(t, r.Stop())
+	}
+}
