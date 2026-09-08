@@ -1,13 +1,21 @@
 name: Regenerate Protobuf
 
+# push = regenerate when a .proto changes; workflow_dispatch = manual run, e.g. after a protoc-gen-go update.
 on:
-  schedule:
-    - cron: "0 6 * * 1"
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "pb/**/*.proto"
+      - "cmd/enricher/pb/**/*.proto"
 
 permissions:
   contents: write
-  pull-requests: write
+
+concurrency:
+  group: proto-regen
+  cancel-in-progress: false
 
 jobs:
   regen:
@@ -49,45 +57,15 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Build regenerated code
+        if: steps.diff.outputs.changed == 'true'
+        run: go build ./...
+
       - name: Commit changes
         if: steps.diff.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B ci/proto-regen
           git add pb/ cmd/enricher/pb/
           git commit -m "chore(proto): regenerate protobuf"
-          git push --force-with-lease origin HEAD:ci/proto-regen
-
-      - name: Create pull request
-        if: steps.diff.outputs.changed == 'true'
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const head = `${owner}:ci/proto-regen`;
-            const base = "main";
-
-            const { data: pulls } = await github.rest.pulls.list({
-              owner,
-              repo,
-              head,
-              state: "open",
-            });
-
-            if (pulls.length) {
-              core.info(`PR already open: ${pulls[0].html_url}`);
-              return;
-            }
-
-            const pr = await github.rest.pulls.create({
-              owner,
-              repo,
-              title: "chore(proto): regenerate protobuf",
-              head,
-              base,
-              body: "Automated protobuf regeneration via .github/workflows/proto-regen.yml.",
-            });
-
-            core.info(`Created PR: ${pr.data.html_url}`);
+          git push origin HEAD:main
